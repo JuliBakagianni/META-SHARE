@@ -32,6 +32,10 @@ urlpatterns += patterns('metashare.stats.views',
   (r'^{0}stats/'.format(DJANGO_BASE), include('metashare.stats.urls')),
 )
 
+urlpatterns += patterns('metashare.oai_pmh.views',
+  (r'^{0}oai_pmh/'.format(DJANGO_BASE), include('metashare.oai_pmh.urls')),
+)
+
 urlpatterns += patterns('metashare.repository.views',
   (r'^{0}repository/'.format(DJANGO_BASE), include('metashare.repository.urls')),
 )

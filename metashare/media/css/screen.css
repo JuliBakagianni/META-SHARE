@@ -790,4 +790,36 @@ table.result_table tr.odd{
 	padding-top:20px;
 }
 
+table.oaipmh_table tbody tr td {
+    overflow: auto;
+    max-width: 500px !important;
+}
+
+table.oaipmh_table tbody tr:nth-child(even) {
+    background: #efefef;
+}
+
+.gray_button{
+	background-image: url(../images/button_top_gray_bg.png);
+	background-repeat: repeat-x;	
+	border: none;
+	margin-top: 7px;
+	height: 26px;
+	width:175px !important;
+	color: white;
+	font-size: 16px !important;	
+	text-decoration: none;	
+    -webkit-border-radius: 5px;
+    -khtml-border-radius: 5px;
+    -moz-border-radius: 5px;
+    border-radius: 5px;
+}
+.gray_button:hover{
+	background-image: url(../images/button_top_gray_bg2.png);
+}
+
+
+
+
+
 

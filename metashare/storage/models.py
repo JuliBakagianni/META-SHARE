@@ -326,7 +326,7 @@ class StorageObject(models.Model):
           self.resourceinfotype_model_set.all()[0].export_to_elementtree(),
           # use ASCII encoding to convert non-ASCII chars to entities
           encoding="ASCII")
-        
+
         if self.metadata != _metadata:
             self.metadata = _metadata
             LOGGER.debug(u"\nMETADATA: {0}\n".format(self.metadata))
@@ -337,7 +337,6 @@ class StorageObject(models.Model):
             if self.publication_status in (INGESTED, PUBLISHED) \
               and self.copy_status == MASTER:
                 self.revision += 1
-            
         # check if there exists a metadata XML file; this is not the case if
         # the publication status just changed from internal to ingested
         # or if the resource was received when syncing
@@ -427,8 +426,8 @@ class StorageObject(models.Model):
         return False
 
 
-def restore_from_folder(storage_id, copy_status=MASTER, \
-  storage_digest=None, source_node=None, force_digest=False):
+def restore_from_folder(storage_id, copy_status=MASTER, publication_status=None,\
+  storage_digest=None, source_node=None, source_url=None, force_digest=False):
     """
     Restores the storage object and the associated resource for the given
     storage object identifier and makes it persistent in the database. 
@@ -451,7 +450,7 @@ def restore_from_folder(storage_id, copy_status=MASTER, \
     Returns the restored resource with its storage object set.
     """
     from metashare.repository.models import resourceInfoType_model
-    
+
     # if a storage object with this id already exists, delete it
     try:
         _so = StorageObject.objects.get(identifier=storage_id)
@@ -460,7 +459,7 @@ def restore_from_folder(storage_id, copy_status=MASTER, \
         _so = None
     
     storage_folder = os.path.join(settings.STORAGE_PATH, storage_id)
-
+    
     # get most current metadata.xml
     _files = os.listdir(storage_folder)
     _metadata_files = \
@@ -492,7 +491,7 @@ def restore_from_folder(storage_id, copy_status=MASTER, \
     else:
         LOGGER.warn('missing storage-global.json, importing resource as new')
         _storage_object.identifier = storage_id
-        
+
     # add local storage object attributes if available 
     if os.path.isfile('{0}/storage-local.json'.format(storage_folder)):
         _local_json = \
@@ -512,23 +511,29 @@ def restore_from_folder(storage_id, copy_status=MASTER, \
             # a default
             LOGGER.warn('no copy status provided, using default copy status MASTER')
             _storage_object.copy_status = MASTER
-    
+  
+    # set publication status if provided (usually for non-local resources)
+    if publication_status:
+        _storage_object.publication_status = publication_status
     # set storage digest if provided (usually for non-local resources)
     if storage_digest:
         _storage_object.digest_checksum = storage_digest
     # set source node id if provided (usually for non-local resources)
     if source_node:
         _storage_object.source_node = source_node
-    
+    # set source url if provided (usually for non-local resources)
+    if source_url:
+        _storage_object.source_url = source_url
+
     _storage_object.update_storage(force_digest=force_digest)
     # update_storage includes saving
     #_storage_object.save()
         
     return resource
 
-
-def add_or_update_resource(storage_json, resource_xml_string, storage_digest,
-                    copy_status=REMOTE, source_node=None):
+def add_or_update_resource(storage_json, resource_xml_string, storage_digest, 
+                           copy_status=REMOTE, source_node=None,\
+                           identifier=None, publication_status=None, source_url=None):
     '''
     For the resource described by storage_json and resource_xml_string,
     do the following:
@@ -546,11 +551,12 @@ def add_or_update_resource(storage_json, resource_xml_string, storage_digest,
         folder = os.path.join(settings.STORAGE_PATH, storage_id)
         if not os.path.exists(folder):
             os.mkdir(folder)
-        with open(os.path.join(folder, 'storage-global.json'), 'wb') as out:
-            out.write(
-              unicode(
-                dumps(storage_json, cls=DjangoJSONEncoder, sort_keys=True, separators=(',',':')))
-                .encode('utf-8'))
+        if storage_json:
+            with open(os.path.join(folder, 'storage-global.json'), 'wb') as out:
+                out.write(
+                  unicode(
+                    dumps(storage_json, cls=DjangoJSONEncoder, sort_keys=True, separators=(',',':')))
+                    .encode('utf-8'))
         with open(os.path.join(folder, 'metadata.xml'), 'wb') as out:
             out.write(unicode(resource_xml_string).encode('utf-8'))
 
@@ -581,15 +587,18 @@ def add_or_update_resource(storage_json, resource_xml_string, storage_digest,
         storage_object.delete()
 
     # Now the actual update_resource():
-    storage_id = storage_json['identifier']
+    storage_id = (identifier if identifier else storage_json['identifier'])
     if storage_object_exists(storage_id):
         if copy_status != MASTER and StorageObject.objects.get(identifier=storage_id).copy_status == MASTER:
             raise IllegalAccessException("Attempt to overwrite a master copy with a non-master-copy record; refusing")
         remove_files_from_disk(storage_id)
         remove_database_entries(storage_id)
     write_to_disk(storage_id)
-    return restore_from_folder(storage_id, copy_status=copy_status,
-      storage_digest=storage_digest, source_node=source_node, force_digest=True)
+    return restore_from_folder(storage_id, copy_status=copy_status, 
+                           publication_status=publication_status, 
+                           storage_digest=storage_digest, 
+                           source_node=source_node, source_url=source_url, 
+                           force_digest=True)
 
 
 def _fill_storage_object(storage_obj, json_file_name):

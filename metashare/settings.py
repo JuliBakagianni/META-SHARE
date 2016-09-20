@@ -167,6 +167,7 @@ INSTALLED_APPS = (
     'analytical',
 
     'metashare.accounts',
+    'metashare.oai_pmh',
     'metashare.storage',
     'metashare.sync',
     'metashare.stats',
@@ -253,4 +254,7 @@ MAX_DOWNLOAD_INTERVAL = 60 * 10
 SYNC_PROTOCOLS = (
     '1.0',
 )
+
+# the URL of the OAI-PMH server, which is used to serve 
+OAIPMH_URL = "{}/oai_pmh/".format(DJANGO_URL)
 

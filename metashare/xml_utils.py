@@ -68,7 +68,7 @@ if __name__ == "__main__":
         print "not equal"
 
 
-def import_from_string(xml_string, targetstatus, copy_status, owner_id=None):
+def import_from_string(xml_string, targetstatus, copy_status, source_url=None, owner_id=None):
     """
     Import a single resource from a string representation of its XML tree, 
     and save it with the given target status.
@@ -76,8 +76,8 @@ def import_from_string(xml_string, targetstatus, copy_status, owner_id=None):
     Returns the imported resource object on success, raises and Exception on failure.
     """
     from metashare.repository.models import resourceInfoType_model
+    from metashare.storage.models import MASTER
     result = resourceInfoType_model.import_from_string(xml_string, copy_status=copy_status)
-    
     if not result[0]:
         msg = u''
         if len(result) > 2:
@@ -85,12 +85,18 @@ def import_from_string(xml_string, targetstatus, copy_status, owner_id=None):
         raise Exception(msg)
     
     resource = result[0]
-    
     # Set publication_status for the new object. Also make sure that the
     # deletion flag is not set (may happen in case of re-importing a previously
     # deleted resource).
     resource.storage_object.publication_status = targetstatus
     resource.storage_object.deleted = False
+    # if copy status is PROXY, then the base URL for the server where
+    # the master copy of the associated language resource is located is not
+    # the DJANGO_URL. Case of OAI-PMH harvesting from external repository
+    resource.storage_object.copy_status = copy_status
+    if source_url and copy_status != MASTER:
+        resource.storage_object.source_url = source_url
+
     if owner_id:
         resource.owners.add(owner_id)
         for edt_grp in User.objects.get(id=owner_id).get_profile() \

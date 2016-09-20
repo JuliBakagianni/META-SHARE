@@ -24,6 +24,14 @@ except ImportError:
             "Using multiple processes might not be safe.")
 
 
+def orderedset(seq):
+    """
+    Return the ordered set of the input sequence
+    """
+    seen = set()
+    seen_add = seen.add
+    return [x for x in seq if x not in seen and not seen_add(x)]
+
 def get_class_by_name(module_name, class_name):
     '''
     Given the name of a module (e.g., 'metashare.resedit.admin')
